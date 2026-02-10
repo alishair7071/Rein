@@ -14,7 +14,7 @@ function SettingsPage() {
     const [sensitivity, setSensitivity] = useState(CONFIG.MOUSE_SENSITIVITY);
     const [qrData, setQrData] = useState('');
 
-    // Load initial state
+    // Client-only setting: stored in localStorage only, never sent to server-config.json
     useEffect(() => {
         const storedIp = localStorage.getItem('rein_ip');
         const defaultIp = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
@@ -177,10 +177,11 @@ function SettingsPage() {
                         const socket = new WebSocket(wsUrl);
 
                         socket.onopen = () => {
+                                // Only server settings; client settings (like ip) stay in localStorage
                             socket.send(JSON.stringify({
                                 type: 'update-config',
                                 config: {
-                                    frontendPort: parseInt(frontendPort),
+                                    frontendPort: parseInt(frontendPort, 10),
                                     mouseInvert: invertScroll,
                                     mouseSensitivity: sensitivity,
                                 }
