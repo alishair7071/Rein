@@ -7,12 +7,6 @@ export const Route = createFileRoute('/settings')({
     component: SettingsPage,
 })
 
-/**
- * Settings UI: server settings (Port, Sensitivity, Invert) are saved to server-config.json via
- * Save Config → WebSocket update-config. Client settings (e.g. Server IP) are stored only in
- * localStorage and are never sent in update-config; the server (websocket.ts) also whitelists
- * which keys it writes, so client data never reaches server-config.json.
- */
 function SettingsPage() {
     const [ip, setIp] = useState('');
     const [frontendPort, setFrontendPort] = useState(String(CONFIG.FRONTEND_PORT));
