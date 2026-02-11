@@ -16,10 +16,20 @@ const getTouchDistance = (a: TrackedTouch, b: TrackedTouch): number => {
     return Math.sqrt(dx * dx + dy * dy);
 };
 
+const CLIENT_KEYS = { SENSITIVITY: 'rein_mouse_sensitivity', INVERT: 'rein_mouse_invert' } as const;
+
+function getClientSettings(): { sensitivity: number; invert: boolean } {
+    if (typeof localStorage === 'undefined') return { sensitivity: 1.0, invert: false };
+    const s = localStorage.getItem(CLIENT_KEYS.SENSITIVITY);
+    const sensitivity = s !== null && !Number.isNaN(Number(s)) ? Number(s) : 1.0;
+    const invert = localStorage.getItem(CLIENT_KEYS.INVERT) === 'true';
+    return { sensitivity, invert };
+}
+
 export const useTrackpadGesture = (
     send: (msg: any) => void,
     scrollMode: boolean,
-    sensitivity: number = 1.5
+    _defaultSensitivity: number = 1.5
 ) => {
     const [isTracking, setIsTracking] = useState(false);
     
@@ -129,8 +139,10 @@ export const useTrackpadGesture = (
             tracked.timeStamp = e.timeStamp;
         }
 
-        // Send movement if we've moved and not in timeout period
+        // Send movement if we've moved and not in timeout period; use client settings so changes take effect immediately
         if (moved.current && e.timeStamp - lastEndTimeStamp.current >= TOUCH_TIMEOUT) {
+            const { sensitivity, invert } = getClientSettings();
+            const scrollSign = invert ? 1 : -1;
             if (!scrollMode && ongoingTouches.current.length === 2) {
                 const dist = getTouchDistance(ongoingTouches.current[0], ongoingTouches.current[1]);
                 const delta = lastPinchDist.current !== null ? dist - lastPinchDist.current : 0;
@@ -140,13 +152,11 @@ export const useTrackpadGesture = (
                     send({ type: 'zoom', delta: delta * sensitivity });
                 } else {
                     lastPinchDist.current = dist;
-                    send({ type: 'scroll', dx: -sumX * sensitivity, dy: -sumY * sensitivity });
+                    send({ type: 'scroll', dx: sumX * sensitivity * scrollSign, dy: sumY * sensitivity * scrollSign });
                 }
             } else if (scrollMode) {
-                // Scroll mode: single finger scrolls, or two-finger scroll in cursor mode
-                send({ type: 'scroll', dx: -sumX * sensitivity, dy: -sumY * sensitivity });
+                send({ type: 'scroll', dx: sumX * sensitivity * scrollSign, dy: sumY * sensitivity * scrollSign });
             } else if (ongoingTouches.current.length === 1 || dragging.current) {
-                // Cursor movement (only in cursor mode with 1 finger, or when dragging)
                 send({ type: 'move', dx: sumX * sensitivity, dy: sumY * sensitivity });
             }
         }

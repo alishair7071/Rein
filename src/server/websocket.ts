@@ -54,7 +54,7 @@ export function createWsServer(server: Server) {
                 if (msg.type === 'update-config') {
                     console.log('Updating config:', msg.config);
                     try {
-                        // Only server config: host, port, address. Client settings (IP, theme, sensitivity, invert) are not written here.
+                        // Only server config: host, port, address. Client settings (sensitivity, invert, theme) stay in localStorage.
                         const SERVER_CONFIG_KEYS = ['host', 'frontendPort', 'address'] as const;
                         const configPath = './src/server-config.json';
                         // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -62,8 +62,13 @@ export function createWsServer(server: Server) {
                         const incoming = msg.config || {};
                         const filtered: Record<string, unknown> = {};
                         for (const key of SERVER_CONFIG_KEYS) {
-                            if (Object.prototype.hasOwnProperty.call(incoming, key)) {
-                                filtered[key] = incoming[key];
+                            if (!Object.prototype.hasOwnProperty.call(incoming, key)) continue;
+                            const val = incoming[key];
+                            if (key === 'frontendPort') {
+                                const num = Number(val);
+                                if (!Number.isNaN(num) && num >= 1 && num <= 65535) filtered[key] = num;
+                            } else {
+                                filtered[key] = val;
                             }
                         }
                         const newConfig = { ...current, ...filtered };

@@ -1,9 +1,8 @@
 import serverConfig from "./server-config.json";
 
 /**
- * Server vs client settings:
- * - Server config (server-config.json): host, frontendPort, address are the only keys writable via Save Config.
- *   mouseInvert/mouseSensitivity may exist in the file for reading but are not updated from the client.
+ * Server config (server-config.json): only host, frontendPort, address are writable via Save Config.
+ * Client settings (mouse sensitivity, invert scroll, theme) are stored in localStorage only.
  */
 export const APP_CONFIG = {
 	SITE_NAME: "Rein",
