@@ -3,12 +3,13 @@ import { KEY_MAP } from './KeyMap';
 import { CONFIG } from '../config';
 
 export interface InputMessage {
-    type: 'move' | 'click' | 'scroll' | 'key' | 'text' | 'zoom';
+    type: 'move' | 'click' | 'scroll' | 'key' | 'text' | 'zoom' | 'combo';
     dx?: number;
     dy?: number;
     button?: 'left' | 'right' | 'middle';
     press?: boolean;
     key?: string;
+    keys?: string[];
     text?: string;
     delta?: number;
 }
@@ -46,8 +47,10 @@ export class InputHandler {
 
             case 'scroll':
                 const invertMultiplier = (CONFIG.MOUSE_INVERT ?? false) ? -1 : 1;
-                if (msg.dy !== undefined && msg.dy !== 0) await mouse.scrollDown(msg.dy * invertMultiplier);
-                if (msg.dx !== undefined && msg.dx !== 0) await mouse.scrollRight(msg.dx * -1 * invertMultiplier);
+                const promises: Promise<void>[] = [];
+                if (msg.dy) promises.push(mouse.scrollDown(msg.dy * invertMultiplier));
+                if (msg.dx) promises.push(mouse.scrollRight(-msg.dx * invertMultiplier));
+                if (promises.length) await Promise.all(promises);
                 break;
 
             case 'zoom':
@@ -78,6 +81,44 @@ export class InputHandler {
                     } else {
                         console.log(`Unmapped key: ${msg.key}`);
                     }
+                }
+                break;
+           case 'combo':
+                if (msg.keys && msg.keys.length > 0) {
+                    const nutKeys: (Key | string)[] = [];
+                    for (const k of msg.keys) {
+                        const lowerKey = k.toLowerCase();
+                        const nutKey = KEY_MAP[lowerKey];
+                        if (nutKey !== undefined) {
+                            nutKeys.push(nutKey);
+                        } else if (lowerKey.length === 1) {
+                            nutKeys.push(lowerKey);
+                        } else {
+                            console.warn(`Unknown key in combo: ${k}`);
+                        }
+                    }
+                    if (nutKeys.length === 0) {
+                        console.error('No valid keys in combo');
+                        return;
+                    }
+                    console.log(`Pressing keys:`, nutKeys);
+                    const pressedKeys: Key[] = [];
+                    try{
+                        for (const k of nutKeys) {
+                            if (typeof(k) === "string") {
+                                await keyboard.type(k as string);
+                            } else {
+                                await keyboard.pressKey(k as Key);
+                                pressedKeys.push(k);
+                            }
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                    }finally{
+                        for (const k of pressedKeys.reverse()) {
+                            await keyboard.releaseKey(k);
+                        }
+                    }
+                    console.log(`Combo complete: ${msg.keys.join('+')}`);
                 }
                 break;
 
