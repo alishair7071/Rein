@@ -2,11 +2,14 @@
 import winston from 'winston';
 import path from 'path';
 import os from 'os';
+import fs from 'fs';
 
 // dynamic log path (similar to logPath() requirement)
 const HOMEDIR = os.homedir();
 const LOG_DIR = path.join(HOMEDIR, '.rein'); 
 const LOG_FILE = path.join(LOG_DIR, 'log.txt');
+// Ensure the log directory exists before Winston tries to open the file
+fs.mkdirSync(LOG_DIR, { recursive: true });
 
 // Ensure the logger handles uncaught exceptions and rejections
 const logger = winston.createLogger({
